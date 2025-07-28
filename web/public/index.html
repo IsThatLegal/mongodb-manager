@@ -558,11 +558,13 @@
                     <div class="cluster-item" onclick="selectCollection('${collection.name}')">
                         <div class="cluster-name">${collection.name}</div>
                         <div class="cluster-env">
-                            ${collection.count !== undefined ? `${collection.count.toLocaleString()} documents` : 'Unknown count'} • 
-                            ${collection.size ? `${(collection.size / 1024).toFixed(1)} KB` : 'Unknown size'}
-                            ${collection.indexes ? ` • ${collection.indexes} indexes` : ''}
+                            ${collection.count !== undefined && collection.count !== 'Unknown' ? 
+                                (typeof collection.count === 'number' ? collection.count.toLocaleString() : collection.count) + ' documents' : 
+                                'Unknown count'} • 
+                            ${collection.size && collection.size > 0 ? `${(collection.size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                            ${collection.indexes && collection.indexes > 0 ? ` • ${collection.indexes} indexes` : ''}
                         </div>
-                        ${collection.error ? `<div style="color: var(--status-error); font-size: 0.8rem; margin-top: 0.5rem;">Error: ${collection.error}</div>` : ''}
+                        ${collection.error ? `<div style="color: var(--status-warning); font-size: 0.8rem; margin-top: 0.5rem;">⚠️ ${collection.error}</div>` : ''}
                     </div>
                 `).join('');
 
