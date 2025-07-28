@@ -33,18 +33,25 @@ async function initializeManager() {
         console.log('URI starts with:', process.env.MONGODB_ATLAS_URI.substring(0, 20) + '...');
         
         console.log('Adding Atlas cluster to configuration...');
+        
+        // Clean the URI to remove any whitespace/newlines
+        const cleanUri = process.env.MONGODB_ATLAS_URI.trim().replace(/\s+/g, '');
+        console.log('Cleaned URI length:', cleanUri.length);
+        
         const clusterConfig = {
-          uri: process.env.MONGODB_ATLAS_URI,
-          environment: 'production',
-          description: 'Atlas Production Cluster',
+          uri: cleanUri,
+          environment: 'production', 
+          description: 'MongoDB Atlas Cluster0',
           encrypted: false,
           options: {
             maxPoolSize: 10,
-            serverSelectionTimeoutMS: 5000
+            serverSelectionTimeoutMS: 5000,
+            connectTimeoutMS: 10000,
+            socketTimeoutMS: 45000
           }
         };
         
-        manager.getConfigManager().addCluster('atlas-prod', clusterConfig);
+        manager.getConfigManager().addCluster('Cluster0', clusterConfig);
         console.log('✅ Atlas cluster added to config');
         
         // Verify it was added

@@ -553,7 +553,14 @@
                 const clustersHTML = this.clusters.map(cluster => `
                     <div class="cluster-item">
                         <div class="cluster-name">${cluster.name || 'Unnamed Cluster'}</div>
-                        <div class="cluster-env">Environment: ${cluster.environment || 'Unknown'}</div>
+                        <div class="cluster-env">
+                            ${cluster.description || 'MongoDB Cluster'} • 
+                            ${cluster.environment || 'Unknown'} • 
+                            Status: ${cluster.status || 'Unknown'}
+                            ${cluster.totalDatabases ? ` • ${cluster.totalDatabases} databases` : ''}
+                            ${cluster.version ? ` • v${cluster.version}` : ''}
+                        </div>
+                        ${cluster.error ? `<div style="color: var(--status-error); font-size: 0.8rem; margin-top: 0.5rem;">Error: ${cluster.error}</div>` : ''}
                     </div>
                 `).join('');
 
