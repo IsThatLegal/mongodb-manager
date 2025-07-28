@@ -1783,7 +1783,23 @@
                 try {
                     console.log('Loading authentication credentials from MongoDB URI...');
                     const response = await fetch('/auth/credentials');
-                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        console.error(`Credential endpoint failed: ${response.status} ${response.statusText}`);
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const responseText = await response.text();
+                    console.log('Credential response:', responseText);
+                    
+                    let data;
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (parseError) {
+                        console.error('Failed to parse credential response as JSON:', parseError);
+                        console.error('Response text:', responseText);
+                        throw new Error('Invalid JSON response from credential endpoint');
+                    }
                     
                     if (data.extracted) {
                         this.validCredentials = {
@@ -1814,27 +1830,48 @@
                     } else {
                         console.log('⚠️ Using fallback credentials');
                         this.validCredentials = {
-                            username: data.fallback?.username || 'admin',
-                            password: 'admin123'
+                            username: 'gabehuerta82',
+                            password: 'Mongodb137*'
                         };
                         
                         const credentialsInfo = document.getElementById('credentialsInfo');
+                        const usernameField = document.getElementById('authUsername');
+                        
                         if (credentialsInfo) {
-                            credentialsInfo.innerHTML = `⚠️ <strong>Fallback mode:</strong> MongoDB URI not found. Using default credentials.`;
+                            credentialsInfo.innerHTML = `⚠️ <strong>Fallback mode:</strong> MongoDB URI extraction failed. Using hardcoded credentials.`;
+                        }
+                        
+                        if (usernameField) {
+                            usernameField.placeholder = 'gabehuerta82';
+                            usernameField.value = 'gabehuerta82';
                         }
                     }
                 } catch (error) {
                     console.error('Failed to load credentials:', error);
-                    // Fallback to default credentials
+                    console.error('Error details:', error.message);
+                    
+                    // Fallback to your hardcoded credentials for now
                     this.validCredentials = {
-                        username: 'admin',
-                        password: 'admin123'
+                        username: 'gabehuerta82',
+                        password: 'Mongodb137*'
                     };
                     
                     const credentialsInfo = document.getElementById('credentialsInfo');
+                    const usernameField = document.getElementById('authUsername');
+                    
                     if (credentialsInfo) {
-                        credentialsInfo.innerHTML = `❌ <strong>Error:</strong> Could not load credentials. Using fallback authentication.`;
+                        credentialsInfo.innerHTML = `⚠️ <strong>Fallback mode:</strong> Using hardcoded credentials (gabehuerta82).`;
                     }
+                    
+                    if (usernameField) {
+                        usernameField.placeholder = 'gabehuerta82';
+                        usernameField.value = 'gabehuerta82';
+                    }
+                    
+                    // Focus password field
+                    setTimeout(() => {
+                        document.getElementById('authPassword').focus();
+                    }, 100);
                 }
                 
                 // Now check auth after credentials are loaded
@@ -1899,8 +1936,9 @@
                         // In production, this should use proper password hashing
                     }
                 } else {
-                    // Fallback credentials
+                    // Fallback credentials - direct comparison
                     isValid = (username === this.validCredentials.username && password === this.validCredentials.password);
+                    console.log('Using fallback credential validation');
                 }
 
                 if (isValid) {

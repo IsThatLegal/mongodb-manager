@@ -13,8 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Basic Authentication Middleware for API endpoints
 function requireAuth(req, res, next) {
-  // Skip auth for health check and debug endpoints
-  if (req.path === '/health' || req.path === '/debug') {
+  // Skip auth for health check, debug, and auth endpoints
+  if (req.path === '/health' || req.path === '/debug' || req.path.startsWith('/auth/')) {
     return next();
   }
   
@@ -135,11 +135,15 @@ app.get('/health', (req, res) => {
 // Auth credentials endpoint - extracts from MongoDB URI
 app.get('/auth/credentials', (req, res) => {
   try {
+    console.log('Auth credentials endpoint called');
     const mongoUri = process.env.MONGODB_ATLAS_URI;
+    console.log('MongoDB URI available:', !!mongoUri);
     
     if (!mongoUri) {
-      return res.status(500).json({ 
+      console.log('No MongoDB URI found, using fallback');
+      return res.json({ 
         error: 'MongoDB URI not configured',
+        extracted: false,
         fallback: {
           username: 'admin',
           message: 'Use default credentials or configure MONGODB_ATLAS_URI'
@@ -167,8 +171,10 @@ app.get('/auth/credentials', (req, res) => {
         message: 'Credentials extracted from MongoDB Atlas URI'
       });
     } else {
-      res.status(400).json({
+      console.log('Could not parse credentials from MongoDB URI');
+      res.json({
         error: 'Could not parse credentials from MongoDB URI',
+        extracted: false,
         fallback: {
           username: 'admin',
           message: 'Check MongoDB URI format'
@@ -177,8 +183,9 @@ app.get('/auth/credentials', (req, res) => {
     }
   } catch (error) {
     console.error('Error extracting credentials:', error);
-    res.status(500).json({ 
+    res.json({ 
       error: 'Failed to extract credentials',
+      extracted: false,
       fallback: {
         username: 'admin',
         message: 'Using fallback authentication'
