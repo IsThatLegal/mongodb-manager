@@ -368,13 +368,39 @@
             background: var(--bg-tertiary);
             border-radius: 8px;
             overflow: hidden;
+            table-layout: fixed;
+        }
+
+        .document-table-container {
+            overflow-x: auto;
+            max-width: 100%;
+            border-radius: 8px;
         }
 
         .document-table th,
         .document-table td {
-            padding: 0.75rem;
+            padding: 0.5rem 0.75rem;
             text-align: left;
             border-bottom: 1px solid var(--border-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .document-table th {
+            width: auto;
+            min-width: 100px;
+            max-width: 150px;
+        }
+
+        .document-table th:first-child {
+            width: 120px;
+            min-width: 120px;
+        }
+
+        .document-table th:last-child {
+            width: 120px;
+            min-width: 120px;
         }
 
         .document-table th {
@@ -422,12 +448,24 @@
         }
 
         .json-cell {
-            max-width: 300px;
+            max-width: 150px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             font-family: 'Monaco', 'Menlo', monospace;
             font-size: 0.85rem;
+            word-break: break-all;
+            position: relative;
+        }
+
+        .json-cell:hover {
+            background: var(--bg-card-hover);
+        }
+
+        @media (max-width: 768px) {
+            .json-cell {
+                max-width: 100px;
+            }
         }
 
         .pagination {
@@ -1273,32 +1311,55 @@
                 });
                 const keys = Array.from(allKeys);
 
+                // Limit to first 6 columns to prevent horizontal overflow
+                const displayKeys = keys.slice(0, 6);
+                const hasMoreKeys = keys.length > 6;
+
                 const tableHTML = `
-                    <table class="document-table">
-                        <thead>
-                            <tr>
-                                ${keys.map(key => `<th>${key}</th>`).join('')}
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data.documents.map(doc => `
+                    <div class="view-controls">
+                        <div class="view-toggle">
+                            <button onclick="dashboard.setDocumentView('cards')">📋 Cards</button>
+                            <button class="active" onclick="dashboard.setDocumentView('table')">📊 Table</button>
+                        </div>
+                        <div class="page-size-control">
+                            <label>Show:</label>
+                            <select onchange="dashboard.changePageSize(this.value)">
+                                <option value="10" ${this.documentsPerPage === 10 ? 'selected' : ''}>10</option>
+                                <option value="20" ${this.documentsPerPage === 20 ? 'selected' : ''}>20</option>
+                                <option value="50" ${this.documentsPerPage === 50 ? 'selected' : ''}>50</option>
+                                <option value="100" ${this.documentsPerPage === 100 ? 'selected' : ''}>100</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="document-table-container">
+                        <table class="document-table">
+                            <thead>
                                 <tr>
-                                    ${keys.map(key => `
-                                        <td class="json-cell" title="${this.formatCellValue(doc[key])}">
-                                            ${this.formatCellValue(doc[key])}
-                                        </td>
-                                    `).join('')}
-                                    <td>
-                                        <div class="document-actions">
-                                            <button class="action-btn edit" onclick="editDocument('${doc._id}')" title="Edit">✏️ Edit</button>
-                                            <button class="action-btn delete" onclick="deleteDocument('${doc._id}')" title="Delete">🗑️ Delete</button>
-                                        </div>
-                                    </td>
+                                    ${displayKeys.map(key => `<th title="${key}">${key.length > 12 ? key.substring(0, 12) + '...' : key}</th>`).join('')}
+                                    ${hasMoreKeys ? `<th title="${keys.length - 6} additional fields hidden">+${keys.length - 6} more</th>` : ''}
+                                    <th>Actions</th>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                ${data.documents.map(doc => `
+                                    <tr>
+                                        ${displayKeys.map(key => `
+                                            <td class="json-cell" title="${key}: ${this.formatCellValue(doc[key])}">
+                                                ${this.formatCellValue(doc[key])}
+                                            </td>
+                                        `).join('')}
+                                        ${hasMoreKeys ? `<td class="json-cell" title="Click edit to view all ${keys.length} fields">...</td>` : ''}
+                                        <td>
+                                            <div class="document-actions">
+                                                <button class="action-btn edit" onclick="editDocument('${doc._id}')" title="Edit">✏️</button>
+                                                <button class="action-btn delete" onclick="deleteDocument('${doc._id}')" title="Delete">🗑️</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 `;
 
                 container.innerHTML = tableHTML;
@@ -1308,10 +1369,43 @@
                 if (value === null) return 'null';
                 if (value === undefined) return 'undefined';
                 if (typeof value === 'object') {
-                    return JSON.stringify(value).substring(0, 100) + (JSON.stringify(value).length > 100 ? '...' : '');
+                    const jsonStr = JSON.stringify(value);
+                    if (Array.isArray(value)) {
+                        return `[${value.length} items]`;
+                    }
+                    return jsonStr.length > 20 ? jsonStr.substring(0, 20) + '...' : jsonStr;
                 }
-                if (typeof value === 'string' && value.length > 50) {
-                    return value.substring(0, 50) + '...';
+                if (typeof value === 'string') {
+                    // Handle URLs and long strings differently
+                    if (value.startsWith('http') || value.startsWith('/')) {
+                        const parts = value.split('/');
+                        return parts.length > 3 ? `.../${parts[parts.length-1]}` : value;
+                    }
+                    return value.length > 20 ? value.substring(0, 20) + '...' : value;
+                }
+                if (typeof value === 'boolean') {
+                    return value ? '\u2713 true' : '\u2717 false';
+                }
+                return String(value);
+            }
+
+            formatPreviewValue(value) {
+                if (value === null) return 'null';
+                if (value === undefined) return 'undefined';
+                if (typeof value === 'object') {
+                    if (Array.isArray(value)) {
+                        return `[${value.length}]`;
+                    }
+                    return Object.keys(value).length > 0 ? `{${Object.keys(value).length}}` : '{}';
+                }
+                if (typeof value === 'string') {
+                    if (value.startsWith('http') || value.startsWith('/')) {
+                        return '\ud83d\udd17 link';
+                    }
+                    return value.length > 12 ? value.substring(0, 12) + '...' : value;
+                }
+                if (typeof value === 'boolean') {
+                    return value ? '\u2713' : '\u2717';
                 }
                 return String(value);
             }
