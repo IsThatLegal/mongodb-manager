@@ -5,6 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MongoDB Cluster Manager - Cloud Dashboard</title>
     <style>
+        :root {
+            /* Light theme variables */
+            --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-secondary: rgba(255, 255, 255, 0.95);
+            --bg-tertiary: rgba(255, 255, 255, 0.9);
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --bg-card-hover: rgba(255, 255, 255, 0.8);
+            --bg-input: rgba(255, 255, 255, 0.9);
+            --bg-code: #2c3e50;
+            --text-primary: #333;
+            --text-secondary: #2c3e50;
+            --text-muted: #7f8c8d;
+            --text-code: #ecf0f1;
+            --text-inverse: rgba(255,255,255,0.8);
+            --border-primary: rgba(255,255,255,0.2);
+            --border-input: rgba(255,255,255,0.3);
+            --border-focus: #667eea;
+            --shadow-primary: 0 8px 32px rgba(0,0,0,0.1);
+            --shadow-card: 0 20px 40px rgba(0,0,0,0.15);
+            --accent-primary: #667eea;
+            --accent-secondary: #f093fb;
+            --accent-success: #4facfe;
+            --status-success: #27ae60;
+            --status-error: #e74c3c;
+            --status-warning: #f39c12;
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-primary: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --bg-secondary: rgba(44, 62, 80, 0.95);
+            --bg-tertiary: rgba(52, 73, 94, 0.9);
+            --bg-card: rgba(52, 73, 94, 0.9);
+            --bg-card-hover: rgba(44, 62, 80, 0.8);
+            --bg-input: rgba(44, 62, 80, 0.9);
+            --bg-code: #1e2834;
+            --text-primary: #ecf0f1;
+            --text-secondary: #bdc3c7;
+            --text-muted: #95a5a6;
+            --text-code: #ecf0f1;
+            --text-inverse: rgba(236,240,241,0.8);
+            --border-primary: rgba(236,240,241,0.2);
+            --border-input: rgba(236,240,241,0.3);
+            --border-focus: #3498db;
+            --shadow-primary: 0 8px 32px rgba(0,0,0,0.3);
+            --shadow-card: 0 20px 40px rgba(0,0,0,0.4);
+            --accent-primary: #3498db;
+            --accent-secondary: #e74c3c;
+            --accent-success: #2ecc71;
+            --status-success: #2ecc71;
+            --status-error: #e74c3c;
+            --status-warning: #f39c12;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,31 +67,69 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--bg-secondary);
             backdrop-filter: blur(10px);
-            color: #333;
+            color: var(--text-primary);
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            box-shadow: var(--shadow-primary);
+            border-bottom: 1px solid var(--border-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
         }
 
-        .header h1 {
+        .header-content h1 {
             font-size: 1.8rem;
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--text-secondary);
         }
 
-        .header .subtitle {
+        .header-content .subtitle {
             opacity: 0.7;
             font-size: 0.9rem;
             margin-top: 0.25rem;
+            color: var(--text-muted);
+        }
+
+        .theme-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-tertiary);
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .theme-selector label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .theme-selector select {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-input);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-selector select:focus {
+            outline: none;
+            border-color: var(--border-focus);
         }
 
         .container {
@@ -47,13 +139,14 @@
         }
 
         .status-bar {
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--bg-tertiary);
             backdrop-filter: blur(10px);
             padding: 1rem;
             border-radius: 12px;
             margin-bottom: 2rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: var(--shadow-primary);
+            border: 1px solid var(--border-primary);
+            transition: all 0.3s ease;
         }
 
         .status-indicator {
@@ -61,18 +154,19 @@
             align-items: center;
             gap: 0.5rem;
             font-weight: 500;
+            color: var(--text-primary);
         }
 
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #e74c3c;
+            background: var(--status-error);
             animation: pulse 2s infinite;
         }
 
         .status-dot.connected {
-            background: #27ae60;
+            background: var(--status-success);
         }
 
         @keyframes pulse {
@@ -89,29 +183,30 @@
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--bg-card);
             backdrop-filter: blur(10px);
             border-radius: 16px;
             padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: var(--shadow-primary);
+            border: 1px solid var(--border-primary);
             transition: all 0.3s ease;
         }
 
         .card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            box-shadow: var(--shadow-card);
+            background: var(--bg-card-hover);
         }
 
         .card h3 {
-            color: #2c3e50;
+            color: var(--text-secondary);
             margin-bottom: 1rem;
             font-size: 1.2rem;
             font-weight: 600;
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary) 100%);
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
@@ -125,14 +220,15 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            filter: brightness(1.1);
         }
 
         .btn.secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-secondary) 100%);
         }
 
         .btn.success {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, var(--accent-success) 0%, var(--accent-success) 100%);
         }
 
         .cluster-list {
@@ -140,33 +236,33 @@
         }
 
         .cluster-item {
-            background: rgba(255, 255, 255, 0.5);
+            background: var(--bg-input);
             margin: 0.5rem 0;
             padding: 1rem;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid var(--accent-primary);
             transition: all 0.3s ease;
         }
 
         .cluster-item:hover {
-            background: rgba(255, 255, 255, 0.8);
+            background: var(--bg-card-hover);
             transform: translateX(5px);
         }
 
         .cluster-name {
             font-weight: 600;
-            color: #2c3e50;
+            color: var(--text-secondary);
         }
 
         .cluster-env {
             font-size: 0.85rem;
-            color: #7f8c8d;
+            color: var(--text-muted);
             margin-top: 0.25rem;
         }
 
         .data-display {
-            background: #2c3e50;
-            color: #ecf0f1;
+            background: var(--bg-code);
+            color: var(--text-code);
             padding: 1rem;
             border-radius: 8px;
             font-family: 'Monaco', 'Menlo', monospace;
@@ -175,16 +271,17 @@
             overflow-y: auto;
             white-space: pre-wrap;
             margin-top: 1rem;
+            border: 1px solid var(--border-primary);
         }
 
         .loading {
             text-align: center;
             padding: 2rem;
-            color: #7f8c8d;
+            color: var(--text-muted);
         }
 
         .error {
-            background: #e74c3c;
+            background: var(--status-error);
             color: white;
             padding: 1rem;
             border-radius: 8px;
@@ -192,7 +289,7 @@
         }
 
         .success {
-            background: #27ae60;
+            background: var(--status-success);
             color: white;
             padding: 1rem;
             border-radius: 8px;
@@ -207,36 +304,47 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            color: #2c3e50;
+            color: var(--text-secondary);
         }
 
         .input-group input, .input-group select, .input-group textarea {
             width: 100%;
             padding: 0.75rem;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid var(--border-input);
             border-radius: 8px;
-            background: rgba(255,255,255,0.9);
+            background: var(--bg-input);
+            color: var(--text-primary);
             font-size: 1rem;
-            transition: border-color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .input-group input:focus, .input-group select:focus, .input-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--border-focus);
         }
 
         .footer {
             text-align: center;
             padding: 2rem;
-            color: rgba(255,255,255,0.8);
+            color: var(--text-inverse);
             font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🍃 MongoDB Cluster Manager</h1>
-        <div class="subtitle">Cloud Dashboard - Serverless Edition</div>
+        <div class="header-content">
+            <h1>🍃 MongoDB Cluster Manager</h1>
+            <div class="subtitle">Cloud Dashboard - Serverless Edition</div>
+        </div>
+        <div class="theme-selector">
+            <label for="themeSelect">Theme:</label>
+            <select id="themeSelect" onchange="switchTheme()">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </div>
     </div>
 
     <div class="container">
@@ -521,6 +629,75 @@
                     statusText.textContent = 'Disconnected from API';
                 }
             }
+        }
+
+        // Theme Management
+        class ThemeManager {
+            constructor() {
+                this.currentTheme = 'system';
+                this.init();
+            }
+
+            init() {
+                // Load saved theme preference
+                const savedTheme = localStorage.getItem('mongodb-manager-theme') || 'system';
+                this.setTheme(savedTheme);
+                
+                // Update select value
+                document.getElementById('themeSelect').value = savedTheme;
+
+                // Listen for system theme changes
+                if (window.matchMedia) {
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                        if (this.currentTheme === 'system') {
+                            this.applySystemTheme();
+                        }
+                    });
+                }
+            }
+
+            setTheme(theme) {
+                this.currentTheme = theme;
+                localStorage.setItem('mongodb-manager-theme', theme);
+
+                if (theme === 'system') {
+                    this.applySystemTheme();
+                } else {
+                    this.applyTheme(theme);
+                }
+            }
+
+            applySystemTheme() {
+                const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.applyTheme(isDark ? 'dark' : 'light');
+            }
+
+            applyTheme(theme) {
+                const html = document.documentElement;
+                
+                if (theme === 'dark') {
+                    html.setAttribute('data-theme', 'dark');
+                } else {
+                    html.removeAttribute('data-theme');
+                }
+            }
+
+            toggleTheme() {
+                const themes = ['system', 'light', 'dark'];
+                const currentIndex = themes.indexOf(this.currentTheme);
+                const nextTheme = themes[(currentIndex + 1) % themes.length];
+                this.setTheme(nextTheme);
+                document.getElementById('themeSelect').value = nextTheme;
+            }
+        }
+
+        // Initialize theme manager
+        const themeManager = new ThemeManager();
+
+        // Global theme switch function
+        function switchTheme() {
+            const select = document.getElementById('themeSelect');
+            themeManager.setTheme(select.value);
         }
 
         // Global functions for button clicks
