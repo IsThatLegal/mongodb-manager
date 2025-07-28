@@ -26,9 +26,10 @@ async function initializeManager() {
       
       manager = new MongoDBManager(config);
       
-      // Add Atlas cluster from environment variable
+      // Add Atlas cluster to config before initialization
       if (process.env.MONGODB_ATLAS_URI) {
-        manager.getClusterManager().addCluster('atlas-prod', {
+        console.log('Adding Atlas cluster to configuration...');
+        manager.getConfigManager().addCluster('atlas-prod', {
           uri: process.env.MONGODB_ATLAS_URI,
           environment: 'production',
           description: 'Atlas Production Cluster',
@@ -38,9 +39,16 @@ async function initializeManager() {
             serverSelectionTimeoutMS: 5000
           }
         });
+        console.log('Atlas cluster added to config');
+      } else {
+        console.log('No MONGODB_ATLAS_URI found in environment');
       }
       
       await manager.initialize();
+      
+      // Debug: Check clusters after initialization
+      const clusters = manager.getClusterManager().listClusters();
+      console.log('Clusters after initialization:', clusters);
       isInitialized = true;
       console.log('MongoDB Manager initialized for Vercel serverless');
     } catch (error) {
