@@ -257,6 +257,95 @@ app.post('/api/backup/:cluster/:database', async (req, res) => {
   }
 });
 
+// CRUD API endpoints for documents
+app.get('/api/documents/:cluster/:database/:collection', async (req, res) => {
+  try {
+    const mgr = await initializeManager();
+    const { cluster, database, collection } = req.params;
+    const { page = 1, limit = 20, filter = '{}' } = req.query;
+    
+    const skip = (page - 1) * limit;
+    const filterObj = JSON.parse(filter);
+    
+    const db = mgr.getClusterManager().getDatabase(cluster, database);
+    const coll = db.collection(collection);
+    
+    const [documents, totalCount] = await Promise.all([
+      coll.find(filterObj).skip(skip).limit(parseInt(limit)).toArray(),
+      coll.countDocuments(filterObj)
+    ]);
+    
+    res.json({
+      documents,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/documents/:cluster/:database/:collection', async (req, res) => {
+  try {
+    const mgr = await initializeManager();
+    const { cluster, database, collection } = req.params;
+    const document = req.body;
+    
+    const db = mgr.getClusterManager().getDatabase(cluster, database);
+    const coll = db.collection(collection);
+    
+    const result = await coll.insertOne(document);
+    res.json({ success: true, insertedId: result.insertedId });
+  } catch (error) {
+    console.error('Error creating document:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/documents/:cluster/:database/:collection/:id', async (req, res) => {
+  try {
+    const mgr = await initializeManager();
+    const { cluster, database, collection, id } = req.params;
+    const update = req.body;
+    
+    const { ObjectId } = require('mongodb');
+    const db = mgr.getClusterManager().getDatabase(cluster, database);
+    const coll = db.collection(collection);
+    
+    const result = await coll.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: update }
+    );
+    
+    res.json({ success: true, modifiedCount: result.modifiedCount });
+  } catch (error) {
+    console.error('Error updating document:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/documents/:cluster/:database/:collection/:id', async (req, res) => {
+  try {
+    const mgr = await initializeManager();
+    const { cluster, database, collection, id } = req.params;
+    
+    const { ObjectId } = require('mongodb');
+    const db = mgr.getClusterManager().getDatabase(cluster, database);
+    const coll = db.collection(collection);
+    
+    const result = await coll.deleteOne({ _id: new ObjectId(id) });
+    res.json({ success: true, deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Default route for SPA
 app.get('*', (req, res) => {
   // For non-API routes, let Vercel handle static files

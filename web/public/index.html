@@ -346,6 +346,178 @@
             color: var(--text-muted);
         }
 
+        .document-manager {
+            grid-column: 1 / -1; /* Full width */
+        }
+
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .document-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .document-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .document-table th,
+        .document-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .document-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .document-table td {
+            color: var(--text-primary);
+        }
+
+        .document-table tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .document-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn.edit {
+            color: var(--accent-primary);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .action-btn.delete {
+            color: var(--status-error);
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .json-cell {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-card);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .modal-header h3 {
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .json-editor {
+            width: 100%;
+            min-height: 300px;
+            padding: 1rem;
+            border: 2px solid var(--border-input);
+            border-radius: 8px;
+            background: var(--bg-code);
+            color: var(--text-code);
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            resize: vertical;
+        }
+
+        .json-editor:focus {
+            outline: none;
+            border-color: var(--border-focus);
+        }
+
         .cluster-name {
             font-weight: 600;
             color: var(--text-secondary);
@@ -470,29 +642,28 @@
                 </div>
             </div>
 
-            <!-- Query Tool Card -->
-            <div class="card">
-                <h3>🔍 Query Tool</h3>
-                <div class="input-group">
-                    <label for="queryCluster">Cluster:</label>
-                    <select id="queryCluster">
-                        <option value="">Select cluster...</option>
-                    </select>
+            <!-- Document Manager Card -->
+            <div class="card document-manager">
+                <div class="document-header">
+                    <h3 id="documentTitle">📄 Document Manager</h3>
+                    <div class="document-controls">
+                        <button class="btn success" onclick="showCreateDialog()" id="createBtn" style="display: none;">+ Add Document</button>
+                        <button class="btn" onclick="refreshDocuments()" id="refreshBtn" style="display: none;">🔄 Refresh</button>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="queryDatabase">Database:</label>
-                    <input type="text" id="queryDatabase" placeholder="database name">
+                
+                <div id="documentContent">
+                    <div class="loading">Select a collection to view and manage documents</div>
                 </div>
-                <div class="input-group">
-                    <label for="queryCollection">Collection:</label>
-                    <input type="text" id="queryCollection" placeholder="collection name">
+                
+                <!-- Pagination -->
+                <div id="paginationControls" style="display: none;">
+                    <div class="pagination">
+                        <button class="btn" onclick="changePage(-1)" id="prevBtn">‹ Previous</button>
+                        <span id="pageInfo">Page 1 of 1</span>
+                        <button class="btn" onclick="changePage(1)" id="nextBtn">Next ›</button>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="queryFilter">Filter (JSON):</label>
-                    <textarea id="queryFilter" rows="3" placeholder='{"status": "active"}'></textarea>
-                </div>
-                <button class="btn success" onclick="executeQuery()">Execute Query</button>
-                <div id="queryResults"></div>
             </div>
 
             <!-- Health Check Card -->
@@ -518,11 +689,33 @@
         MongoDB Cluster Manager - Cloud Edition | Powered by Vercel Serverless
     </div>
 
+    <!-- CRUD Modals -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add Document</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="input-group">
+                <label for="documentEditor">Document JSON:</label>
+                <textarea id="documentEditor" class="json-editor" placeholder='{\n  "field": "value",\n  "number": 123,\n  "active": true\n}'></textarea>
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn success" onclick="saveDocument()" id="saveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         class MongoDBDashboard {
             constructor() {
                 this.baseURL = window.location.origin;
                 this.clusters = [];
+                this.currentCollection = null;
+                this.currentPage = 1;
+                this.documentsPerPage = 20;
+                this.editingDocument = null;
                 this.init();
             }
 
@@ -871,6 +1064,160 @@
                     statusText.textContent = 'Disconnected from API';
                 }
             }
+
+            // Document Management Methods
+            async loadDocuments(clusterName, databaseName, collectionName, page = 1) {
+                this.currentCollection = { cluster: clusterName, database: databaseName, collection: collectionName };
+                this.currentPage = page;
+                
+                try {
+                    this.updateStatus(`Loading documents from ${collectionName}...`);
+                    const response = await fetch(`${this.baseURL}/api/documents/${clusterName}/${databaseName}/${collectionName}?page=${page}&limit=${this.documentsPerPage}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    this.displayDocuments(data, collectionName);
+                    this.updatePagination(data.pagination);
+                    
+                    // Show controls
+                    document.getElementById('createBtn').style.display = 'block';
+                    document.getElementById('refreshBtn').style.display = 'block';
+                    document.getElementById('paginationControls').style.display = 'block';
+                    document.getElementById('documentTitle').textContent = `📄 ${collectionName} (${data.pagination.total} documents)`;
+                    
+                } catch (error) {
+                    console.error('Failed to load documents:', error);
+                    this.displayError('Failed to load documents: ' + error.message);
+                }
+            }
+
+            displayDocuments(data, collectionName) {
+                const container = document.getElementById('documentContent');
+                
+                if (data.documents.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            <p>No documents found in ${collectionName}</p>
+                            <button class="btn success" onclick="showCreateDialog()">+ Add First Document</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Get all unique keys from documents for table headers
+                const allKeys = new Set(['_id']);
+                data.documents.forEach(doc => {
+                    Object.keys(doc).forEach(key => allKeys.add(key));
+                });
+                const keys = Array.from(allKeys);
+
+                const tableHTML = `
+                    <table class="document-table">
+                        <thead>
+                            <tr>
+                                ${keys.map(key => `<th>${key}</th>`).join('')}
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.documents.map(doc => `
+                                <tr>
+                                    ${keys.map(key => `
+                                        <td class="json-cell" title="${this.formatCellValue(doc[key])}">
+                                            ${this.formatCellValue(doc[key])}
+                                        </td>
+                                    `).join('')}
+                                    <td>
+                                        <div class="document-actions">
+                                            <button class="action-btn edit" onclick="editDocument('${doc._id}')" title="Edit">✏️ Edit</button>
+                                            <button class="action-btn delete" onclick="deleteDocument('${doc._id}')" title="Delete">🗑️ Delete</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+                container.innerHTML = tableHTML;
+            }
+
+            formatCellValue(value) {
+                if (value === null) return 'null';
+                if (value === undefined) return 'undefined';
+                if (typeof value === 'object') {
+                    return JSON.stringify(value).substring(0, 100) + (JSON.stringify(value).length > 100 ? '...' : '');
+                }
+                if (typeof value === 'string' && value.length > 50) {
+                    return value.substring(0, 50) + '...';
+                }
+                return String(value);
+            }
+
+            updatePagination(pagination) {
+                document.getElementById('pageInfo').textContent = `Page ${pagination.page} of ${pagination.pages} (${pagination.total} total)`;
+                document.getElementById('prevBtn').disabled = pagination.page <= 1;
+                document.getElementById('nextBtn').disabled = pagination.page >= pagination.pages;
+            }
+
+            async createDocument(documentData) {
+                try {
+                    const response = await fetch(`${this.baseURL}/api/documents/${this.currentCollection.cluster}/${this.currentCollection.database}/${this.currentCollection.collection}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(documentData)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    await this.loadDocuments(this.currentCollection.cluster, this.currentCollection.database, this.currentCollection.collection, this.currentPage);
+                    this.displaySuccess('Document created successfully!');
+                } catch (error) {
+                    console.error('Error creating document:', error);
+                    throw error;
+                }
+            }
+
+            async updateDocument(documentId, documentData) {
+                try {
+                    const response = await fetch(`${this.baseURL}/api/documents/${this.currentCollection.cluster}/${this.currentCollection.database}/${this.currentCollection.collection}/${documentId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(documentData)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    await this.loadDocuments(this.currentCollection.cluster, this.currentCollection.database, this.currentCollection.collection, this.currentPage);
+                    this.displaySuccess('Document updated successfully!');
+                } catch (error) {
+                    console.error('Error updating document:', error);
+                    throw error;
+                }
+            }
+
+            async deleteDocument(documentId) {
+                if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${this.baseURL}/api/documents/${this.currentCollection.cluster}/${this.currentCollection.database}/${this.currentCollection.collection}/${documentId}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    await this.loadDocuments(this.currentCollection.cluster, this.currentCollection.database, this.currentCollection.collection, this.currentPage);
+                    this.displaySuccess('Document deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting document:', error);
+                    this.displayError('Failed to delete document: ' + error.message);
+                }
+            }
         }
 
         // Theme Management
@@ -1031,22 +1378,110 @@
         }
 
         function selectCollectionFromBrowser(collectionName, clusterName, databaseName) {
-            // Auto-fill the query tool
-            document.getElementById('queryCluster').value = clusterName;
-            document.getElementById('queryDatabase').value = databaseName;
-            document.getElementById('queryCollection').value = collectionName;
+            // Load documents in the document manager
+            dashboard.loadDocuments(clusterName, databaseName, collectionName);
             
-            // Scroll to query tool and highlight it briefly
-            const queryCard = document.getElementById('queryCollection').closest('.card');
-            queryCard.scrollIntoView({ behavior: 'smooth' });
+            // Scroll to document manager and highlight it briefly
+            const docCard = document.querySelector('.document-manager');
+            docCard.scrollIntoView({ behavior: 'smooth' });
             
             // Brief highlight effect
-            queryCard.style.transform = 'scale(1.02)';
-            queryCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+            docCard.style.transform = 'scale(1.01)';
+            docCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
             setTimeout(() => {
-                queryCard.style.transform = '';
-                queryCard.style.boxShadow = '';
+                docCard.style.transform = '';
+                docCard.style.boxShadow = '';
             }, 1000);
+        }
+
+        // CRUD Global Functions
+        async function refreshDocuments() {
+            if (dashboard.currentCollection) {
+                await dashboard.loadDocuments(
+                    dashboard.currentCollection.cluster,
+                    dashboard.currentCollection.database,
+                    dashboard.currentCollection.collection,
+                    dashboard.currentPage
+                );
+            }
+        }
+
+        function changePage(direction) {
+            const newPage = dashboard.currentPage + direction;
+            if (newPage >= 1 && dashboard.currentCollection) {
+                dashboard.loadDocuments(
+                    dashboard.currentCollection.cluster,
+                    dashboard.currentCollection.database,
+                    dashboard.currentCollection.collection,
+                    newPage
+                );
+            }
+        }
+
+        function showCreateDialog() {
+            document.getElementById('modalTitle').textContent = 'Add New Document';
+            document.getElementById('documentEditor').value = '{\n  \n}';
+            document.getElementById('saveBtn').textContent = 'Create';
+            dashboard.editingDocument = null;
+            document.getElementById('documentModal').classList.add('show');
+        }
+
+        async function editDocument(documentId) {
+            // Find the document in current loaded documents
+            const container = document.getElementById('documentContent');
+            const table = container.querySelector('.document-table');
+            if (!table) return;
+
+            try {
+                // Get fresh document data
+                const response = await fetch(`${dashboard.baseURL}/api/documents/${dashboard.currentCollection.cluster}/${dashboard.currentCollection.database}/${dashboard.currentCollection.collection}?filter={"_id":"${documentId}"}&limit=1`);
+                const data = await response.json();
+                
+                if (data.documents.length > 0) {
+                    const doc = data.documents[0];
+                    document.getElementById('modalTitle').textContent = 'Edit Document';
+                    document.getElementById('documentEditor').value = JSON.stringify(doc, null, 2);
+                    document.getElementById('saveBtn').textContent = 'Update';
+                    dashboard.editingDocument = documentId;
+                    document.getElementById('documentModal').classList.add('show');
+                }
+            } catch (error) {
+                dashboard.displayError('Failed to load document for editing: ' + error.message);
+            }
+        }
+
+        async function deleteDocument(documentId) {
+            await dashboard.deleteDocument(documentId);
+        }
+
+        function closeModal() {
+            document.getElementById('documentModal').classList.remove('show');
+            dashboard.editingDocument = null;
+        }
+
+        async function saveDocument() {
+            const editor = document.getElementById('documentEditor');
+            let documentData;
+            
+            try {
+                documentData = JSON.parse(editor.value);
+            } catch (error) {
+                dashboard.displayError('Invalid JSON: ' + error.message);
+                return;
+            }
+
+            try {
+                if (dashboard.editingDocument) {
+                    // Remove _id from update data
+                    const { _id, ...updateData } = documentData;
+                    await dashboard.updateDocument(dashboard.editingDocument, updateData);
+                } else {
+                    await dashboard.createDocument(documentData);
+                }
+                closeModal();
+            } catch (error) {
+                dashboard.displayError('Failed to save document: ' + error.message);
+            }
         }
 
         function toggleSystemDatabases() {
