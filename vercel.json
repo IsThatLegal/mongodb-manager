@@ -28,6 +28,10 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/debug",
+      "dest": "/api/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/web/public/$1"
     }

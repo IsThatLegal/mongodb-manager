@@ -89,8 +89,19 @@ app.get('/health', (req, res) => {
 // Debug endpoint to check environment and configuration
 app.get('/debug', async (req, res) => {
   try {
+    console.log('=== DEBUG ENDPOINT CALLED ===');
+    
+    const envVars = Object.keys(process.env).filter(key => 
+      key.includes('MONGO') || key.includes('NODE') || key.includes('VERCEL')
+    );
+    
     const hasAtlasUri = !!process.env.MONGODB_ATLAS_URI;
     const atlasUriLength = process.env.MONGODB_ATLAS_URI ? process.env.MONGODB_ATLAS_URI.length : 0;
+    
+    console.log('Environment check:');
+    console.log('- Has MONGODB_ATLAS_URI:', hasAtlasUri);
+    console.log('- URI length:', atlasUriLength);
+    console.log('- Relevant env vars:', envVars);
     
     let managerStatus = 'not initialized';
     let configClusters = {};
@@ -100,14 +111,18 @@ app.get('/debug', async (req, res) => {
       managerStatus = 'initialized';
       configClusters = manager.getConfigManager().getClusters();
       clusterManagerClusters = manager.getClusterManager().listClusters();
+      console.log('Manager is initialized, clusters:', clusterManagerClusters.length);
+    } else {
+      console.log('Manager not initialized yet');
     }
     
-    res.json({
+    const debugInfo = {
       environment: {
         NODE_ENV: process.env.NODE_ENV,
         VERCEL: process.env.VERCEL,
         hasAtlasUri,
-        atlasUriLength: atlasUriLength > 0 ? `${atlasUriLength} characters` : 'not set'
+        atlasUriLength: atlasUriLength > 0 ? `${atlasUriLength} characters` : 'not set',
+        relevantEnvVars: envVars
       },
       manager: {
         status: managerStatus,
@@ -115,9 +130,13 @@ app.get('/debug', async (req, res) => {
         configClusters: Object.keys(configClusters),
         clusterManagerClusters: clusterManagerClusters.length
       }
-    });
+    };
+    
+    console.log('Returning debug info:', JSON.stringify(debugInfo, null, 2));
+    res.json(debugInfo);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 
