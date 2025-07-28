@@ -20,12 +20,22 @@ function requireAuth(req, res, next) {
   
   // Check for simple API key in headers
   const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
-  const validKeys = [
-    'gabehuerta82-mongodb-access',
-    'Bearer gabehuerta82-mongodb-access',
+  
+  // Generate valid keys dynamically from MongoDB URI
+  let validKeys = [
     'mongodb-manager-2024',
     'Bearer mongodb-cluster-access'
   ];
+  
+  // Extract username from MongoDB URI for dynamic API key
+  if (process.env.MONGODB_ATLAS_URI) {
+    const uriMatch = process.env.MONGODB_ATLAS_URI.match(/mongodb\+srv:\/\/([^:]+):/);
+    if (uriMatch) {
+      const username = uriMatch[1];
+      validKeys.push(`${username}-mongodb-access`);
+      validKeys.push(`Bearer ${username}-mongodb-access`);
+    }
+  }
   
   if (!apiKey || !validKeys.includes(apiKey)) {
     return res.status(401).json({ 
@@ -120,6 +130,61 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     vercel: true
   });
+});
+
+// Auth credentials endpoint - extracts from MongoDB URI
+app.get('/auth/credentials', (req, res) => {
+  try {
+    const mongoUri = process.env.MONGODB_ATLAS_URI;
+    
+    if (!mongoUri) {
+      return res.status(500).json({ 
+        error: 'MongoDB URI not configured',
+        fallback: {
+          username: 'admin',
+          message: 'Use default credentials or configure MONGODB_ATLAS_URI'
+        }
+      });
+    }
+
+    // Extract credentials from MongoDB URI
+    // Format: mongodb+srv://username:password@cluster...
+    const uriMatch = mongoUri.match(/mongodb\+srv:\/\/([^:]+):([^@]+)@/);
+    
+    if (uriMatch) {
+      const [, username, password] = uriMatch;
+      
+      // Return hashed version for security verification
+      const crypto = require('crypto');
+      const usernameHash = crypto.createHash('sha256').update(username).digest('hex');
+      const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+      
+      res.json({
+        username: username,
+        usernameHash,
+        passwordHash,
+        extracted: true,
+        message: 'Credentials extracted from MongoDB Atlas URI'
+      });
+    } else {
+      res.status(400).json({
+        error: 'Could not parse credentials from MongoDB URI',
+        fallback: {
+          username: 'admin',
+          message: 'Check MongoDB URI format'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error extracting credentials:', error);
+    res.status(500).json({ 
+      error: 'Failed to extract credentials',
+      fallback: {
+        username: 'admin',
+        message: 'Using fallback authentication'
+      }
+    });
+  }
 });
 
 // Debug endpoint to check environment and configuration

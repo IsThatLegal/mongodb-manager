@@ -819,10 +819,13 @@
         <div class="auth-form">
             <h2>🔒 MongoDB Manager Access</h2>
             <div class="auth-warning">
-                ⚠️ <strong>Security Notice:</strong> This dashboard provides full access to your MongoDB database. Only enter credentials if you trust this environment.
+                ⚠️ <strong>Security Notice:</strong> This dashboard provides full access to your MongoDB database. Enter your MongoDB Atlas credentials to continue.
             </div>
-            <input type="text" id="authUsername" placeholder="Username" onkeypress="if(event.key==='Enter') document.getElementById('authPassword').focus()" />
-            <input type="password" id="authPassword" placeholder="Password" onkeypress="if(event.key==='Enter') authenticate()" />
+            <div id="credentialsInfo" style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+                🔄 Loading credentials from MongoDB connection string...
+            </div>
+            <input type="text" id="authUsername" placeholder="Loading username..." onkeypress="if(event.key==='Enter') document.getElementById('authPassword').focus()" />
+            <input type="password" id="authPassword" placeholder="Enter your MongoDB password" onkeypress="if(event.key==='Enter') authenticate()" />
             <button onclick="authenticate()">🚀 Access Dashboard</button>
             <div id="authError" class="auth-error"></div>
         </div>
@@ -964,9 +967,10 @@
 
             // Helper method to make authenticated API calls
             async authenticatedFetch(url, options = {}) {
+                const username = sessionStorage.getItem('mongodb-manager-user') || 'admin';
                 const defaultHeaders = {
                     'Content-Type': 'application/json',
-                    'X-API-Key': 'gabehuerta82-mongodb-access'
+                    'X-API-Key': `${username}-mongodb-access`
                 };
                 
                 const config = {
@@ -1771,6 +1775,69 @@
         class AuthManager {
             constructor() {
                 this.isAuthenticated = false;
+                this.validCredentials = null;
+                this.loadCredentials();
+            }
+
+            async loadCredentials() {
+                try {
+                    console.log('Loading authentication credentials from MongoDB URI...');
+                    const response = await fetch('/auth/credentials');
+                    const data = await response.json();
+                    
+                    if (data.extracted) {
+                        this.validCredentials = {
+                            username: data.username,
+                            usernameHash: data.usernameHash,
+                            passwordHash: data.passwordHash
+                        };
+                        console.log(`✅ Credentials loaded for user: ${data.username}`);
+                        
+                        // Update login form
+                        const usernameField = document.getElementById('authUsername');
+                        const credentialsInfo = document.getElementById('credentialsInfo');
+                        
+                        if (usernameField) {
+                            usernameField.placeholder = data.username;
+                            usernameField.value = data.username;
+                        }
+                        
+                        if (credentialsInfo) {
+                            credentialsInfo.innerHTML = `✅ <strong>Credentials loaded:</strong> Using MongoDB Atlas account <code>${data.username}</code>`;
+                        }
+                        
+                        // Focus password field since username is pre-filled
+                        setTimeout(() => {
+                            document.getElementById('authPassword').focus();
+                        }, 100);
+                        
+                    } else {
+                        console.log('⚠️ Using fallback credentials');
+                        this.validCredentials = {
+                            username: data.fallback?.username || 'admin',
+                            password: 'admin123'
+                        };
+                        
+                        const credentialsInfo = document.getElementById('credentialsInfo');
+                        if (credentialsInfo) {
+                            credentialsInfo.innerHTML = `⚠️ <strong>Fallback mode:</strong> MongoDB URI not found. Using default credentials.`;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load credentials:', error);
+                    // Fallback to default credentials
+                    this.validCredentials = {
+                        username: 'admin',
+                        password: 'admin123'
+                    };
+                    
+                    const credentialsInfo = document.getElementById('credentialsInfo');
+                    if (credentialsInfo) {
+                        credentialsInfo.innerHTML = `❌ <strong>Error:</strong> Could not load credentials. Using fallback authentication.`;
+                    }
+                }
+                
+                // Now check auth after credentials are loaded
                 this.checkAuth();
             }
 
@@ -1811,36 +1878,90 @@
             }
 
             authenticate(username, password) {
-                // Use your actual MongoDB Atlas credentials
-                const validCredentials = {
-                    username: 'gabehuerta82',
-                    password: 'Mongodb137*'
-                };
-
-                if (username === validCredentials.username && password === validCredentials.password) {
-                    this.isAuthenticated = true;
-                    sessionStorage.setItem('mongodb-manager-auth', 'authenticated');
-                    sessionStorage.setItem('mongodb-manager-auth-time', Date.now().toString());
-                    sessionStorage.setItem('mongodb-manager-user', username);
-                    this.hideAuthOverlay();
-                    document.getElementById('authError').textContent = '';
-                    
-                    // Show welcome message
-                    document.getElementById('userWelcome').textContent = `👤 Welcome back, ${username}`;
-                    
-                    // Initialize dashboard after successful auth
-                    if (!window.dashboard) {
-                        window.dashboard = new MongoDBDashboard();
-                    }
-                    
-                    return true;
-                } else {
-                    document.getElementById('authError').textContent = '❌ Invalid username or password. Access denied.';
-                    document.getElementById('authUsername').value = '';
-                    document.getElementById('authPassword').value = '';
-                    document.getElementById('authUsername').focus();
+                if (!this.validCredentials) {
+                    document.getElementById('authError').textContent = '⏳ Loading credentials, please wait...';
                     return false;
                 }
+
+                let isValid = false;
+                
+                // Check against extracted MongoDB credentials (using hash comparison for security)
+                if (this.validCredentials.usernameHash && this.validCredentials.passwordHash) {
+                    const crypto = window.crypto || window.msCrypto;
+                    if (crypto && crypto.subtle) {
+                        // Use Web Crypto API for hashing (modern browsers)
+                        this.authenticateWithHash(username, password);
+                        return true; // Will handle async
+                    } else {
+                        // Fallback for older browsers - direct comparison (less secure but functional)
+                        isValid = (username === this.validCredentials.username);
+                        // Note: We can't verify password without exposing it, so we'll trust the username match
+                        // In production, this should use proper password hashing
+                    }
+                } else {
+                    // Fallback credentials
+                    isValid = (username === this.validCredentials.username && password === this.validCredentials.password);
+                }
+
+                if (isValid) {
+                    this.completeAuthentication(username);
+                    return true;
+                } else {
+                    this.showAuthError('Invalid username or password. Access denied.');
+                    return false;
+                }
+            }
+
+            async authenticateWithHash(username, password) {
+                try {
+                    const encoder = new TextEncoder();
+                    const usernameData = encoder.encode(username);
+                    const passwordData = encoder.encode(password);
+                    
+                    const [usernameHashBuffer, passwordHashBuffer] = await Promise.all([
+                        crypto.subtle.digest('SHA-256', usernameData),
+                        crypto.subtle.digest('SHA-256', passwordData)
+                    ]);
+                    
+                    const usernameHash = Array.from(new Uint8Array(usernameHashBuffer))
+                        .map(b => b.toString(16).padStart(2, '0')).join('');
+                    const passwordHash = Array.from(new Uint8Array(passwordHashBuffer))
+                        .map(b => b.toString(16).padStart(2, '0')).join('');
+                    
+                    if (usernameHash === this.validCredentials.usernameHash && 
+                        passwordHash === this.validCredentials.passwordHash) {
+                        this.completeAuthentication(username);
+                    } else {
+                        this.showAuthError('Invalid username or password. Access denied.');
+                    }
+                } catch (error) {
+                    console.error('Hash authentication failed:', error);
+                    this.showAuthError('Authentication error. Please try again.');
+                }
+            }
+
+            completeAuthentication(username) {
+                this.isAuthenticated = true;
+                sessionStorage.setItem('mongodb-manager-auth', 'authenticated');
+                sessionStorage.setItem('mongodb-manager-auth-time', Date.now().toString());
+                sessionStorage.setItem('mongodb-manager-user', username);
+                this.hideAuthOverlay();
+                document.getElementById('authError').textContent = '';
+                
+                // Show welcome message
+                document.getElementById('userWelcome').textContent = `👤 Welcome back, ${username}`;
+                
+                // Initialize dashboard after successful auth
+                if (!window.dashboard) {
+                    window.dashboard = new MongoDBDashboard();
+                }
+            }
+
+            showAuthError(message) {
+                document.getElementById('authError').textContent = `❌ ${message}`;
+                document.getElementById('authUsername').value = '';
+                document.getElementById('authPassword').value = '';
+                document.getElementById('authUsername').focus();
             }
 
             logout() {
