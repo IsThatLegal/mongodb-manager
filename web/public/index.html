@@ -1828,50 +1828,35 @@
                         }, 100);
                         
                     } else {
-                        console.log('⚠️ Using fallback credentials');
-                        this.validCredentials = {
-                            username: 'gabehuerta82',
-                            password: 'Mongodb137*'
-                        };
+                        console.log('⚠️ MongoDB URI extraction failed');
+                        
+                        // SECURE: No hardcoded credentials - show error instead
+                        this.validCredentials = null;
                         
                         const credentialsInfo = document.getElementById('credentialsInfo');
-                        const usernameField = document.getElementById('authUsername');
                         
                         if (credentialsInfo) {
-                            credentialsInfo.innerHTML = `⚠️ <strong>Fallback mode:</strong> MongoDB URI extraction failed. Using hardcoded credentials.`;
+                            credentialsInfo.innerHTML = `❌ <strong>Configuration Error:</strong> MongoDB URI not found or invalid. Please check environment variables.`;
                         }
                         
-                        if (usernameField) {
-                            usernameField.placeholder = 'gabehuerta82';
-                            usernameField.value = 'gabehuerta82';
-                        }
+                        // Show error - authentication will not work
+                        document.getElementById('authError').textContent = '❌ Authentication system not configured. Please check server setup.';
                     }
                 } catch (error) {
                     console.error('Failed to load credentials:', error);
                     console.error('Error details:', error.message);
                     
-                    // Fallback to your hardcoded credentials for now
-                    this.validCredentials = {
-                        username: 'gabehuerta82',
-                        password: 'Mongodb137*'
-                    };
+                    // SECURE: No hardcoded credentials in client code
+                    this.validCredentials = null;
                     
                     const credentialsInfo = document.getElementById('credentialsInfo');
-                    const usernameField = document.getElementById('authUsername');
                     
                     if (credentialsInfo) {
-                        credentialsInfo.innerHTML = `⚠️ <strong>Fallback mode:</strong> Using hardcoded credentials (gabehuerta82).`;
+                        credentialsInfo.innerHTML = `❌ <strong>Error:</strong> Could not load authentication system. Please check server configuration.`;
                     }
                     
-                    if (usernameField) {
-                        usernameField.placeholder = 'gabehuerta82';
-                        usernameField.value = 'gabehuerta82';
-                    }
-                    
-                    // Focus password field
-                    setTimeout(() => {
-                        document.getElementById('authPassword').focus();
-                    }, 100);
+                    // Show error state - no fallback credentials
+                    document.getElementById('authError').textContent = '❌ Authentication system unavailable. Please contact administrator.';
                 }
                 
                 // Now check auth after credentials are loaded
@@ -1916,7 +1901,7 @@
 
             authenticate(username, password) {
                 if (!this.validCredentials) {
-                    document.getElementById('authError').textContent = '⏳ Loading credentials, please wait...';
+                    document.getElementById('authError').textContent = '❌ Authentication system not available. Please check server configuration.';
                     return false;
                 }
 
