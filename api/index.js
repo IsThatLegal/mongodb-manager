@@ -28,8 +28,12 @@ async function initializeManager() {
       
       // Add Atlas cluster to config before initialization
       if (process.env.MONGODB_ATLAS_URI) {
+        console.log('✅ MONGODB_ATLAS_URI found in environment');
+        console.log('URI length:', process.env.MONGODB_ATLAS_URI.length);
+        console.log('URI starts with:', process.env.MONGODB_ATLAS_URI.substring(0, 20) + '...');
+        
         console.log('Adding Atlas cluster to configuration...');
-        manager.getConfigManager().addCluster('atlas-prod', {
+        const clusterConfig = {
           uri: process.env.MONGODB_ATLAS_URI,
           environment: 'production',
           description: 'Atlas Production Cluster',
@@ -38,17 +42,29 @@ async function initializeManager() {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000
           }
-        });
-        console.log('Atlas cluster added to config');
+        };
+        
+        manager.getConfigManager().addCluster('atlas-prod', clusterConfig);
+        console.log('✅ Atlas cluster added to config');
+        
+        // Verify it was added
+        const configClusters = manager.getConfigManager().getClusters();
+        console.log('Config clusters after adding:', Object.keys(configClusters));
       } else {
-        console.log('No MONGODB_ATLAS_URI found in environment');
+        console.log('❌ No MONGODB_ATLAS_URI found in environment');
+        console.log('Available env vars:', Object.keys(process.env).filter(key => key.includes('MONGO')));
       }
       
+      console.log('Initializing manager...');
       await manager.initialize();
+      console.log('✅ Manager initialized');
       
       // Debug: Check clusters after initialization
       const clusters = manager.getClusterManager().listClusters();
-      console.log('Clusters after initialization:', clusters);
+      console.log('✅ Clusters after initialization:', clusters.length);
+      clusters.forEach((cluster, index) => {
+        console.log(`  ${index + 1}. ${cluster.name} (${cluster.environment}) - ${cluster.status}`);
+      });
       isInitialized = true;
       console.log('MongoDB Manager initialized for Vercel serverless');
     } catch (error) {
@@ -70,14 +86,56 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to check environment and configuration
+app.get('/debug', async (req, res) => {
+  try {
+    const hasAtlasUri = !!process.env.MONGODB_ATLAS_URI;
+    const atlasUriLength = process.env.MONGODB_ATLAS_URI ? process.env.MONGODB_ATLAS_URI.length : 0;
+    
+    let managerStatus = 'not initialized';
+    let configClusters = {};
+    let clusterManagerClusters = [];
+    
+    if (isInitialized && manager) {
+      managerStatus = 'initialized';
+      configClusters = manager.getConfigManager().getClusters();
+      clusterManagerClusters = manager.getClusterManager().listClusters();
+    }
+    
+    res.json({
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        VERCEL: process.env.VERCEL,
+        hasAtlasUri,
+        atlasUriLength: atlasUriLength > 0 ? `${atlasUriLength} characters` : 'not set'
+      },
+      manager: {
+        status: managerStatus,
+        isInitialized,
+        configClusters: Object.keys(configClusters),
+        clusterManagerClusters: clusterManagerClusters.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API Routes
 app.get('/api/clusters', async (req, res) => {
   try {
+    console.log('=== /api/clusters called ===');
     const mgr = await initializeManager();
+    console.log('Manager initialized successfully');
+    
     const clusters = mgr.getClusterManager().listClusters();
+    console.log('Clusters from manager:', clusters);
+    console.log('Number of clusters:', clusters.length);
+    
     res.json(clusters);
   } catch (error) {
     console.error('Error listing clusters:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ error: error.message });
   }
 });
