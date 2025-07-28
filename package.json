@@ -9,17 +9,21 @@
   },
   "scripts": {
     "start": "node lib/index.js",
-    "dev": "nodemon lib/index.js",
+    "dev": "nodemon api/index.js",
     "web": "node web/server.js",
+    "api": "node api/index.js",
+    "vercel-dev": "vercel dev",
+    "deploy": "vercel --prod",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --verbose",
     "test:ci": "jest --coverage --ci --watchAll=false --testResultsProcessor=jest-sonar-reporter",
-    "lint": "eslint lib/**/*.js bin/**/*.js web/**/*.js tests/**/*.js",
-    "lint:fix": "eslint lib/**/*.js bin/**/*.js web/**/*.js tests/**/*.js --fix",
+    "lint": "eslint lib/**/*.js bin/**/*.js web/**/*.js api/**/*.js tests/**/*.js",
+    "lint:fix": "eslint lib/**/*.js bin/**/*.js web/**/*.js api/**/*.js tests/**/*.js --fix",
     "docs": "jsdoc -d docs/api lib/**/*.js",
     "validate": "npm run lint && npm run test:coverage",
-    "precommit": "npm run validate"
+    "precommit": "npm run validate",
+    "build": "echo 'No build step required for Vercel'"
   },
   "keywords": [
     "mongodb",

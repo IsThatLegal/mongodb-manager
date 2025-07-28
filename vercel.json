@@ -1,9 +1,13 @@
 {
   "version": 2,
   "name": "mongodb-manager",
+  "github": {
+    "enabled": true,
+    "autoAlias": true
+  },
   "builds": [
     {
-      "src": "web/server.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
     },
     {
@@ -14,11 +18,11 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/web/server.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/health",
-      "dest": "/web/server.js"
+      "dest": "/api/index.js"
     },
     {
       "src": "/(.*)",
@@ -26,13 +30,10 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "MONGODB_ATLAS_URI": "@mongodb_atlas_uri",
-    "JWT_SECRET": "@jwt_secret",
-    "MM_ENCRYPTION_KEY": "@mm_encryption_key"
+    "NODE_ENV": "production"
   },
   "functions": {
-    "web/server.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   }
