@@ -11,6 +11,34 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Basic Authentication Middleware for API endpoints
+function requireAuth(req, res, next) {
+  // Skip auth for health check and debug endpoints
+  if (req.path === '/health' || req.path === '/debug') {
+    return next();
+  }
+  
+  // Check for simple API key in headers
+  const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
+  const validKeys = [
+    'mongodb-manager-2024',
+    'Bearer mongodb-cluster-access',
+    'API-KEY-mongodb2024!'
+  ];
+  
+  if (!apiKey || !validKeys.includes(apiKey)) {
+    return res.status(401).json({ 
+      error: 'Unauthorized access',
+      message: 'Valid API key required for database operations'
+    });
+  }
+  
+  next();
+}
+
+// Apply auth to all API routes
+app.use('/api', requireAuth);
+
 // Initialize MongoDB Manager
 let manager;
 let isInitialized = false;

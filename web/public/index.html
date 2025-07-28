@@ -814,6 +814,19 @@
     </style>
 </head>
 <body>
+    <!-- Authentication Overlay -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-form">
+            <h2>🔒 MongoDB Manager Access</h2>
+            <div class="auth-warning">
+                ⚠️ <strong>Security Notice:</strong> This dashboard provides full access to your MongoDB database. Only enter credentials if you trust this environment.
+            </div>
+            <input type="password" id="authPassword" placeholder="Enter access password" onkeypress="if(event.key==='Enter') authenticate()" />
+            <button onclick="authenticate()">🚀 Access Dashboard</button>
+            <div id="authError" class="auth-error"></div>
+        </div>
+    </div>
+
     <div class="header">
         <div class="header-content">
             <h1>🍃 MongoDB Cluster Manager</h1>
@@ -826,6 +839,7 @@
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
             </select>
+            <button onclick="logout()" style="margin-left: 1rem; padding: 0.25rem 0.5rem; font-size: 0.8rem;" class="btn secondary">🚪 Logout</button>
         </div>
     </div>
 
@@ -946,6 +960,24 @@
                 this.updateConnectionStatus(true);
             }
 
+            // Helper method to make authenticated API calls
+            async authenticatedFetch(url, options = {}) {
+                const defaultHeaders = {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'mongodb-manager-2024'
+                };
+                
+                const config = {
+                    ...options,
+                    headers: {
+                        ...defaultHeaders,
+                        ...options.headers
+                    }
+                };
+                
+                return fetch(url, config);
+            }
+
             async checkAPIHealth() {
                 try {
                     const response = await fetch(`${this.baseURL}/health`);
@@ -964,7 +996,7 @@
             async loadClusters() {
                 try {
                     this.updateStatus('Loading clusters...');
-                    const response = await fetch(`${this.baseURL}/api/clusters`);
+                    const response = await this.authenticatedFetch(`${this.baseURL}/api/clusters`);
                     
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -995,7 +1027,7 @@
             async loadDatabaseBrowser(clusterName) {
                 try {
                     this.updateStatus('Loading database browser...');
-                    const response = await fetch(`${this.baseURL}/api/databases/${clusterName}`);
+                    const response = await this.authenticatedFetch(`${this.baseURL}/api/databases/${clusterName}`);
                     
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1269,7 +1301,7 @@
                 
                 try {
                     this.updateStatus(`Loading documents from ${collectionName}...`);
-                    const response = await fetch(`${this.baseURL}/api/documents/${clusterName}/${databaseName}/${collectionName}?page=${page}&limit=${this.documentsPerPage}`);
+                    const response = await this.authenticatedFetch(`${this.baseURL}/api/documents/${clusterName}/${databaseName}/${collectionName}?page=${page}&limit=${this.documentsPerPage}`);
                     
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1418,9 +1450,8 @@
 
             async createDocument(documentData) {
                 try {
-                    const response = await fetch(`${this.baseURL}/api/documents/${this.currentCollection.cluster}/${this.currentCollection.database}/${this.currentCollection.collection}`, {
+                    const response = await this.authenticatedFetch(`${this.baseURL}/api/documents/${this.currentCollection.cluster}/${this.currentCollection.database}/${this.currentCollection.collection}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(documentData)
                     });
 
@@ -1734,8 +1765,102 @@
             }
         }
 
-        // Initialize the dashboard
-        const dashboard = new MongoDBDashboard();
+        // Authentication System
+        class AuthManager {
+            constructor() {
+                this.isAuthenticated = false;
+                this.checkAuth();
+            }
+
+            checkAuth() {
+                const authToken = sessionStorage.getItem('mongodb-manager-auth');
+                const authTime = sessionStorage.getItem('mongodb-manager-auth-time');
+                
+                // Check if auth token exists and is less than 4 hours old
+                if (authToken && authTime) {
+                    const now = Date.now();
+                    const authAge = now - parseInt(authTime);
+                    const fourHours = 4 * 60 * 60 * 1000;
+                    
+                    if (authAge < fourHours) {
+                        this.isAuthenticated = true;
+                        this.hideAuthOverlay();
+                        return;
+                    }
+                }
+                
+                this.showAuthOverlay();
+            }
+
+            showAuthOverlay() {
+                document.getElementById('authOverlay').style.display = 'flex';
+                document.getElementById('authPassword').focus();
+            }
+
+            hideAuthOverlay() {
+                document.getElementById('authOverlay').style.display = 'none';
+            }
+
+            authenticate(password) {
+                // Simple password check - in production, use proper authentication
+                const validPasswords = [
+                    'mongodb2024!',
+                    'cluster-admin',
+                    'secure-access-2024'
+                ];
+
+                if (validPasswords.includes(password)) {
+                    this.isAuthenticated = true;
+                    sessionStorage.setItem('mongodb-manager-auth', 'authenticated');
+                    sessionStorage.setItem('mongodb-manager-auth-time', Date.now().toString());
+                    this.hideAuthOverlay();
+                    document.getElementById('authError').textContent = '';
+                    
+                    // Initialize dashboard after successful auth
+                    if (!window.dashboard) {
+                        window.dashboard = new MongoDBDashboard();
+                    }
+                    
+                    return true;
+                } else {
+                    document.getElementById('authError').textContent = '❌ Invalid password. Access denied.';
+                    document.getElementById('authPassword').value = '';
+                    return false;
+                }
+            }
+
+            logout() {
+                this.isAuthenticated = false;
+                sessionStorage.removeItem('mongodb-manager-auth');
+                sessionStorage.removeItem('mongodb-manager-auth-time');
+                this.showAuthOverlay();
+                
+                // Clear any sensitive data from memory
+                if (window.dashboard) {
+                    window.dashboard = null;
+                }
+            }
+        }
+
+        // Global auth functions
+        const authManager = new AuthManager();
+        
+        function authenticate() {
+            const password = document.getElementById('authPassword').value;
+            authManager.authenticate(password);
+        }
+        
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                authManager.logout();
+            }
+        }
+
+        // Only initialize dashboard after authentication
+        let dashboard = null;
+        
+        // Initialize auth system immediately
+        authManager.checkAuth();
     </script>
 </body>
 </html>
