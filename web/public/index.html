@@ -249,6 +249,17 @@
             transform: translateX(5px);
         }
 
+        .cluster-item[onclick] {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cluster-item[onclick]:hover {
+            background: var(--bg-card-hover);
+            transform: translateX(8px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
         .cluster-name {
             font-weight: 600;
             color: var(--text-secondary);
@@ -379,6 +390,20 @@
                 </div>
             </div>
 
+            <!-- Collections Card -->
+            <div class="card">
+                <h3>📚 Collections</h3>
+                <div class="input-group">
+                    <label for="databaseSelect">Select Database:</label>
+                    <select id="databaseSelect" onchange="loadCollections()">
+                        <option value="">Choose a database...</option>
+                    </select>
+                </div>
+                <div id="collectionsList">
+                    <div class="loading">Select a database to view collections</div>
+                </div>
+            </div>
+
             <!-- Query Tool Card -->
             <div class="card">
                 <h3>🔍 Query Tool</h3>
@@ -496,6 +521,54 @@
                 }
             }
 
+            async loadCollections() {
+                const clusterName = document.getElementById('clusterSelect').value;
+                const databaseName = document.getElementById('databaseSelect').value;
+                
+                if (!clusterName || !databaseName) {
+                    document.getElementById('collectionsList').innerHTML = '<div class="loading">Select a cluster and database to view collections</div>';
+                    return;
+                }
+
+                try {
+                    this.updateStatus('Loading collections...');
+                    const response = await fetch(`${this.baseURL}/api/collections/${clusterName}/${databaseName}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const collections = await response.json();
+                    this.displayCollections(collections);
+                } catch (error) {
+                    console.error('Failed to load collections:', error);
+                    this.displayError('Failed to load collections: ' + error.message);
+                }
+            }
+
+            displayCollections(collections) {
+                const container = document.getElementById('collectionsList');
+                
+                if (collections.length === 0) {
+                    container.innerHTML = '<div class="loading">No collections found</div>';
+                    return;
+                }
+
+                const collectionsHTML = collections.map(collection => `
+                    <div class="cluster-item" onclick="selectCollection('${collection.name}')">
+                        <div class="cluster-name">${collection.name}</div>
+                        <div class="cluster-env">
+                            ${collection.count !== undefined ? `${collection.count.toLocaleString()} documents` : 'Unknown count'} • 
+                            ${collection.size ? `${(collection.size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                            ${collection.indexes ? ` • ${collection.indexes} indexes` : ''}
+                        </div>
+                        ${collection.error ? `<div style="color: var(--status-error); font-size: 0.8rem; margin-top: 0.5rem;">Error: ${collection.error}</div>` : ''}
+                    </div>
+                `).join('');
+
+                container.innerHTML = collectionsHTML;
+            }
+
             async executeQuery() {
                 const cluster = document.getElementById('queryCluster').value;
                 const database = document.getElementById('queryDatabase').value;
@@ -569,20 +642,32 @@
 
             displayDatabases(databases) {
                 const container = document.getElementById('databasesList');
+                const databaseSelect = document.getElementById('databaseSelect');
                 
                 if (databases.length === 0) {
                     container.innerHTML = '<div class="loading">No databases found</div>';
+                    databaseSelect.innerHTML = '<option value="">No databases available</option>';
                     return;
                 }
 
+                // Populate the databases list display
                 const databasesHTML = databases.map(db => `
-                    <div class="cluster-item">
+                    <div class="cluster-item" onclick="selectDatabase('${db.name}')">
                         <div class="cluster-name">${db.name}</div>
                         <div class="cluster-env">Size: ${db.sizeOnDisk ? (db.sizeOnDisk / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}</div>
                     </div>
                 `).join('');
 
                 container.innerHTML = databasesHTML;
+
+                // Populate the database dropdown for collections
+                databaseSelect.innerHTML = '<option value="">Choose a database...</option>';
+                databases.forEach(db => {
+                    const option = document.createElement('option');
+                    option.value = db.name;
+                    option.textContent = db.name;
+                    databaseSelect.appendChild(option);
+                });
             }
 
             populateClusterSelects() {
@@ -714,6 +799,29 @@
 
         async function loadDatabases() {
             await dashboard.loadDatabases();
+        }
+
+        async function loadCollections() {
+            await dashboard.loadCollections();
+        }
+
+        function selectDatabase(databaseName) {
+            const databaseSelect = document.getElementById('databaseSelect');
+            databaseSelect.value = databaseName;
+            loadCollections();
+        }
+
+        function selectCollection(collectionName) {
+            // Auto-fill the query tool with selected collection
+            const clusterSelect = document.getElementById('clusterSelect');
+            const databaseSelect = document.getElementById('databaseSelect');
+            
+            document.getElementById('queryCluster').value = clusterSelect.value;
+            document.getElementById('queryDatabase').value = databaseSelect.value;
+            document.getElementById('queryCollection').value = collectionName;
+            
+            // Scroll to query tool
+            document.getElementById('queryCollection').closest('.card').scrollIntoView({ behavior: 'smooth' });
         }
 
         async function executeQuery() {
