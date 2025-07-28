@@ -1,0 +1,104 @@
+#!/usr/bin/env node
+
+require('dotenv').config();
+const program = require('commander');
+const MongoDBManager = require('../lib');
+const pkg = require('../package.json');
+
+// Import CLI commands
+const clustersCommand = require('../lib/cli/clusters');
+const databasesCommand = require('../lib/cli/databases');
+const queryCommand = require('../lib/cli/query');
+const backupCommand = require('../lib/cli/backup');
+const monitorCommand = require('../lib/cli/monitor');
+const usersCommand = require('../lib/cli/users');
+const cleanupCommand = require('../lib/cli/cleanup');
+
+program
+  .name('mm')
+  .description('MongoDB Cluster Manager - Professional MongoDB management tool')
+  .version(pkg.version);
+
+// Global options
+program
+  .option('-c, --config <path>', 'Config file path')
+  .option('-v, --verbose', 'Verbose output')
+  .option('--log-level <level>', 'Log level (error, warn, info, debug)', 'info');
+
+// Initialize manager with global options
+async function initializeManager(options) {
+  const manager = new MongoDBManager({
+    configPath: options.config,
+    logLevel: options.logLevel || (options.verbose ? 'debug' : 'info')
+  });
+  
+  try {
+    await manager.initialize();
+    return manager;
+  } catch (error) {
+    console.error('Failed to initialize MongoDB Manager:', error.message);
+    process.exit(1);
+  }
+}
+
+// Register commands
+clustersCommand(program, initializeManager);
+databasesCommand(program, initializeManager);
+queryCommand(program, initializeManager);
+backupCommand(program, initializeManager);
+monitorCommand(program, initializeManager);
+usersCommand(program, initializeManager);
+cleanupCommand(program, initializeManager);
+
+// Interactive shell command
+program
+  .command('shell')
+  .description('Start interactive MongoDB manager shell')
+  .action(async () => {
+    const InteractiveShell = require('../lib/cli/interactive-shell');
+    const manager = await initializeManager(program.opts());
+    const shell = new InteractiveShell(manager);
+    await shell.start();
+  });
+
+// Health check command
+program
+  .command('health [cluster]')
+  .description('Check health of clusters')
+  .action(async (cluster) => {
+    const manager = await initializeManager(program.opts());
+    try {
+      const results = await manager.getClusterManager().healthCheck(cluster);
+      console.log('Health Check Results:');
+      for (const [name, status] of Object.entries(results)) {
+        const emoji = status.status === 'healthy' ? '✅' : '❌';
+        console.log(`${emoji} ${name}: ${status.status}`);
+        if (status.error) {
+          console.log(`   Error: ${status.error}`);
+        }
+      }
+    } catch (error) {
+      console.error('Health check failed:', error.message);
+      process.exit(1);
+    } finally {
+      await manager.shutdown();
+    }
+  });
+
+// Version command with detailed info
+program
+  .command('version')
+  .description('Show version information')
+  .action(() => {
+    console.log(`MongoDB Manager v${pkg.version}`);
+    console.log(`Node.js ${process.version}`);
+    console.log(`Platform: ${process.platform} ${process.arch}`);
+  });
+
+// Parse command line arguments
+program.parse();
+
+// Show help if no command provided
+if (!process.argv.slice(2).length) {
+  program.outputHelp();
+}

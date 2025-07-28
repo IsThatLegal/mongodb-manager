@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mongodb-manager
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm run web
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_ATLAS_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MM_ENCRYPTION_KEY
+        generateValue: true
+      - key: LOG_LEVEL
+        value: info

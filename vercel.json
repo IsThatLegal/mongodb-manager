@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "name": "mongodb-manager",
+  "builds": [
+    {
+      "src": "web/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "web/public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/web/server.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/web/server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/web/public/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "MONGODB_ATLAS_URI": "@mongodb_atlas_uri",
+    "JWT_SECRET": "@jwt_secret",
+    "MM_ENCRYPTION_KEY": "@mm_encryption_key"
+  },
+  "functions": {
+    "web/server.js": {
+      "maxDuration": 30
+    }
+  }
+}
