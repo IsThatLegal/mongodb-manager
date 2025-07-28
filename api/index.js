@@ -21,9 +21,10 @@ function requireAuth(req, res, next) {
   // Check for simple API key in headers
   const apiKey = req.headers['x-api-key'] || req.headers['authorization'];
   const validKeys = [
+    'gabehuerta82-mongodb-access',
+    'Bearer gabehuerta82-mongodb-access',
     'mongodb-manager-2024',
-    'Bearer mongodb-cluster-access',
-    'API-KEY-mongodb2024!'
+    'Bearer mongodb-cluster-access'
   ];
   
   if (!apiKey || !validKeys.includes(apiKey)) {

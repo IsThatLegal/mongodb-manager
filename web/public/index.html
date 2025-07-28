@@ -821,7 +821,8 @@
             <div class="auth-warning">
                 ⚠️ <strong>Security Notice:</strong> This dashboard provides full access to your MongoDB database. Only enter credentials if you trust this environment.
             </div>
-            <input type="password" id="authPassword" placeholder="Enter access password" onkeypress="if(event.key==='Enter') authenticate()" />
+            <input type="text" id="authUsername" placeholder="Username" onkeypress="if(event.key==='Enter') document.getElementById('authPassword').focus()" />
+            <input type="password" id="authPassword" placeholder="Password" onkeypress="if(event.key==='Enter') authenticate()" />
             <button onclick="authenticate()">🚀 Access Dashboard</button>
             <div id="authError" class="auth-error"></div>
         </div>
@@ -831,6 +832,7 @@
         <div class="header-content">
             <h1>🍃 MongoDB Cluster Manager</h1>
             <div class="subtitle">Cloud Dashboard - Serverless Edition</div>
+            <div id="userWelcome" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;"></div>
         </div>
         <div class="theme-selector">
             <label for="themeSelect">Theme:</label>
@@ -964,7 +966,7 @@
             async authenticatedFetch(url, options = {}) {
                 const defaultHeaders = {
                     'Content-Type': 'application/json',
-                    'X-API-Key': 'mongodb-manager-2024'
+                    'X-API-Key': 'gabehuerta82-mongodb-access'
                 };
                 
                 const config = {
@@ -1785,6 +1787,13 @@
                     if (authAge < fourHours) {
                         this.isAuthenticated = true;
                         this.hideAuthOverlay();
+                        
+                        // Restore welcome message
+                        const username = sessionStorage.getItem('mongodb-manager-user');
+                        if (username) {
+                            document.getElementById('userWelcome').textContent = `👤 Welcome back, ${username}`;
+                        }
+                        
                         return;
                     }
                 }
@@ -1801,20 +1810,23 @@
                 document.getElementById('authOverlay').style.display = 'none';
             }
 
-            authenticate(password) {
-                // Simple password check - in production, use proper authentication
-                const validPasswords = [
-                    'mongodb2024!',
-                    'cluster-admin',
-                    'secure-access-2024'
-                ];
+            authenticate(username, password) {
+                // Use your actual MongoDB Atlas credentials
+                const validCredentials = {
+                    username: 'gabehuerta82',
+                    password: 'Mongodb137*'
+                };
 
-                if (validPasswords.includes(password)) {
+                if (username === validCredentials.username && password === validCredentials.password) {
                     this.isAuthenticated = true;
                     sessionStorage.setItem('mongodb-manager-auth', 'authenticated');
                     sessionStorage.setItem('mongodb-manager-auth-time', Date.now().toString());
+                    sessionStorage.setItem('mongodb-manager-user', username);
                     this.hideAuthOverlay();
                     document.getElementById('authError').textContent = '';
+                    
+                    // Show welcome message
+                    document.getElementById('userWelcome').textContent = `👤 Welcome back, ${username}`;
                     
                     // Initialize dashboard after successful auth
                     if (!window.dashboard) {
@@ -1823,8 +1835,10 @@
                     
                     return true;
                 } else {
-                    document.getElementById('authError').textContent = '❌ Invalid password. Access denied.';
+                    document.getElementById('authError').textContent = '❌ Invalid username or password. Access denied.';
+                    document.getElementById('authUsername').value = '';
                     document.getElementById('authPassword').value = '';
+                    document.getElementById('authUsername').focus();
                     return false;
                 }
             }
@@ -1833,6 +1847,7 @@
                 this.isAuthenticated = false;
                 sessionStorage.removeItem('mongodb-manager-auth');
                 sessionStorage.removeItem('mongodb-manager-auth-time');
+                sessionStorage.removeItem('mongodb-manager-user');
                 this.showAuthOverlay();
                 
                 // Clear any sensitive data from memory
@@ -1846,8 +1861,9 @@
         const authManager = new AuthManager();
         
         function authenticate() {
+            const username = document.getElementById('authUsername').value;
             const password = document.getElementById('authPassword').value;
-            authManager.authenticate(password);
+            authManager.authenticate(username, password);
         }
         
         function logout() {
