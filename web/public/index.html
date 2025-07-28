@@ -432,10 +432,22 @@
 
         .pagination {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             gap: 1rem;
             padding: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .pagination-info {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .modal {
@@ -659,9 +671,13 @@
                 <!-- Pagination -->
                 <div id="paginationControls" style="display: none;">
                     <div class="pagination">
-                        <button class="btn" onclick="changePage(-1)" id="prevBtn">‹ Previous</button>
-                        <span id="pageInfo">Page 1 of 1</span>
-                        <button class="btn" onclick="changePage(1)" id="nextBtn">Next ›</button>
+                        <div class="pagination-info">
+                            <span id="pageInfo">Page 1 of 1</span>
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="btn" onclick="changePage(-1)" id="prevBtn">‹ Previous</button>
+                            <button class="btn" onclick="changePage(1)" id="nextBtn">Next ›</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -714,7 +730,8 @@
                 this.clusters = [];
                 this.currentCollection = null;
                 this.currentPage = 1;
-                this.documentsPerPage = 20;
+                this.documentsPerPage = parseInt(localStorage.getItem('mongodb-manager-page-size')) || 20;
+                this.documentViewMode = localStorage.getItem('mongodb-manager-document-view') || 'cards';
                 this.editingDocument = null;
                 this.init();
             }
