@@ -260,6 +260,92 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
+        .database-browser {
+            grid-column: 1 / -1; /* Full width */
+        }
+
+        .database-item {
+            background: var(--bg-input);
+            margin: 0.5rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-success);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .database-item:hover {
+            background: var(--bg-card-hover);
+            transform: translateX(5px);
+        }
+
+        .database-item.expanded {
+            border-left-color: var(--accent-primary);
+            background: var(--bg-card);
+        }
+
+        .database-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .database-name {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .database-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .collections-container {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-primary);
+            display: none;
+        }
+
+        .collections-container.expanded {
+            display: block;
+        }
+
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .collection-item {
+            background: var(--bg-tertiary);
+            padding: 0.75rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-secondary);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .collection-item:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .collection-name {
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .collection-stats {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
         .cluster-name {
             font-weight: 600;
             color: var(--text-secondary);
@@ -376,31 +462,11 @@
                 </div>
             </div>
 
-            <!-- Databases Card -->
-            <div class="card">
-                <h3>🗄️ Databases</h3>
-                <div class="input-group">
-                    <label for="clusterSelect">Select Cluster:</label>
-                    <select id="clusterSelect" onchange="loadDatabases()">
-                        <option value="">Choose a cluster...</option>
-                    </select>
-                </div>
-                <div id="databasesList">
-                    <div class="loading">Select a cluster to view databases</div>
-                </div>
-            </div>
-
-            <!-- Collections Card -->
-            <div class="card">
-                <h3>📚 Collections</h3>
-                <div class="input-group">
-                    <label for="databaseSelect">Select Database:</label>
-                    <select id="databaseSelect" onchange="loadCollections()">
-                        <option value="">Choose a database...</option>
-                    </select>
-                </div>
-                <div id="collectionsList">
-                    <div class="loading">Select a database to view collections</div>
+            <!-- Database Browser Card -->
+            <div class="card database-browser">
+                <h3>🗄️ Database Browser</h3>
+                <div id="databaseBrowser">
+                    <div class="loading">Loading your databases...</div>
                 </div>
             </div>
 
@@ -463,6 +529,7 @@
             async init() {
                 await this.checkAPIHealth();
                 await this.loadClusters();
+                await this.autoLoadDatabaseBrowser(); // Automatically load the integrated browser
                 this.updateConnectionStatus(true);
             }
 
@@ -499,6 +566,87 @@
                     this.displayError('Failed to load clusters: ' + error.message);
                     this.updateConnectionStatus(false);
                 }
+            }
+
+            async autoLoadDatabaseBrowser() {
+                // Automatically load the integrated database browser
+                if (this.clusters.length === 0) {
+                    document.getElementById('databaseBrowser').innerHTML = '<div class="loading">No clusters available</div>';
+                    return;
+                }
+
+                // Use the first available cluster (usually Cluster0)
+                const primaryCluster = this.clusters[0];
+                await this.loadDatabaseBrowser(primaryCluster.name);
+            }
+
+            async loadDatabaseBrowser(clusterName) {
+                try {
+                    this.updateStatus('Loading database browser...');
+                    const response = await fetch(`${this.baseURL}/api/databases/${clusterName}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const databases = await response.json();
+                    this.displayDatabaseBrowser(databases, clusterName);
+                } catch (error) {
+                    console.error('Failed to load database browser:', error);
+                    document.getElementById('databaseBrowser').innerHTML = `<div class="error">Failed to load databases: ${error.message}</div>`;
+                }
+            }
+
+            displayDatabaseBrowser(databases, clusterName) {
+                const container = document.getElementById('databaseBrowser');
+                
+                if (databases.length === 0) {
+                    container.innerHTML = '<div class="loading">No databases found</div>';
+                    return;
+                }
+
+                // Filter out system databases by default, but show them as expandable
+                const userDatabases = databases.filter(db => !['admin', 'local', 'config'].includes(db.name));
+                const systemDatabases = databases.filter(db => ['admin', 'local', 'config'].includes(db.name));
+
+                const databasesHTML = [
+                    ...userDatabases.map(db => this.createDatabaseHTML(db, clusterName)),
+                    systemDatabases.length > 0 ? `
+                        <div class="database-item" onclick="toggleSystemDatabases()">
+                            <div class="database-header">
+                                <div>
+                                    <div class="database-name">📁 System Databases</div>
+                                    <div class="database-info">${systemDatabases.length} system databases (admin, local, config)</div>
+                                </div>
+                                <div style="color: var(--text-muted);">▼</div>
+                            </div>
+                            <div class="collections-container" id="systemDatabases">
+                                ${systemDatabases.map(db => this.createDatabaseHTML(db, clusterName)).join('')}
+                            </div>
+                        </div>
+                    ` : ''
+                ].join('');
+
+                container.innerHTML = databasesHTML;
+            }
+
+            createDatabaseHTML(database, clusterName) {
+                const sizeInfo = database.sizeOnDisk ? `${(database.sizeOnDisk / 1024 / 1024).toFixed(2)} MB` : 'Unknown size';
+                
+                return `
+                    <div class="database-item" onclick="toggleDatabase('${database.name}', '${clusterName}')" id="db-${database.name}">
+                        <div class="database-header">
+                            <div>
+                                <div class="database-name">${database.name}</div>
+                                <div class="database-info">${sizeInfo} • Click to explore collections</div>
+                            </div>
+                            <div style="color: var(--text-muted); transition: transform 0.3s ease;" class="expand-arrow">▼</div>
+                        </div>
+                        <div class="collections-container" id="collections-${database.name}">
+                            <div class="loading" style="text-align: center; padding: 1rem; color: var(--text-muted);">Loading collections...</div>
+                        </div>
+                    </div>
+                `;
             }
 
             async loadDatabases() {
@@ -824,6 +972,86 @@
             
             // Scroll to query tool
             document.getElementById('queryCollection').closest('.card').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function toggleDatabase(databaseName, clusterName) {
+            const dbElement = document.getElementById(`db-${databaseName}`);
+            const collectionsContainer = document.getElementById(`collections-${databaseName}`);
+            const arrow = dbElement.querySelector('.expand-arrow');
+            
+            if (collectionsContainer.classList.contains('expanded')) {
+                // Collapse
+                collectionsContainer.classList.remove('expanded');
+                dbElement.classList.remove('expanded');
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                // Expand and load collections
+                collectionsContainer.classList.add('expanded');
+                dbElement.classList.add('expanded');
+                arrow.style.transform = 'rotate(180deg)';
+                
+                // Load collections if not already loaded
+                if (collectionsContainer.innerHTML.includes('Loading collections...')) {
+                    try {
+                        const response = await fetch(`${dashboard.baseURL}/api/collections/${clusterName}/${databaseName}`);
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        
+                        const collections = await response.json();
+                        displayCollectionsInBrowser(collections, collectionsContainer, clusterName, databaseName);
+                    } catch (error) {
+                        collectionsContainer.innerHTML = `<div class="error">Failed to load collections: ${error.message}</div>`;
+                    }
+                }
+            }
+        }
+
+        function displayCollectionsInBrowser(collections, container, clusterName, databaseName) {
+            if (collections.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 1rem; color: var(--text-muted);">No collections found</div>';
+                return;
+            }
+
+            const collectionsHTML = `
+                <div class="collections-grid">
+                    ${collections.map(collection => `
+                        <div class="collection-item" onclick="selectCollectionFromBrowser('${collection.name}', '${clusterName}', '${databaseName}')">
+                            <div class="collection-name">${collection.name}</div>
+                            <div class="collection-stats">
+                                ${collection.count !== undefined && collection.count !== 'Unknown' ? 
+                                    (typeof collection.count === 'number' ? collection.count.toLocaleString() : collection.count) + ' docs' : 
+                                    'Unknown'} • 
+                                ${collection.size && collection.size > 0 ? `${(collection.size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            container.innerHTML = collectionsHTML;
+        }
+
+        function selectCollectionFromBrowser(collectionName, clusterName, databaseName) {
+            // Auto-fill the query tool
+            document.getElementById('queryCluster').value = clusterName;
+            document.getElementById('queryDatabase').value = databaseName;
+            document.getElementById('queryCollection').value = collectionName;
+            
+            // Scroll to query tool and highlight it briefly
+            const queryCard = document.getElementById('queryCollection').closest('.card');
+            queryCard.scrollIntoView({ behavior: 'smooth' });
+            
+            // Brief highlight effect
+            queryCard.style.transform = 'scale(1.02)';
+            queryCard.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.3)';
+            setTimeout(() => {
+                queryCard.style.transform = '';
+                queryCard.style.boxShadow = '';
+            }, 1000);
+        }
+
+        function toggleSystemDatabases() {
+            const systemDbContainer = document.getElementById('systemDatabases');
+            systemDbContainer.classList.toggle('expanded');
         }
 
         async function executeQuery() {
