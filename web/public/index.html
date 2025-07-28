@@ -1809,22 +1809,25 @@
                         };
                         console.log(`✅ Credentials loaded for user: ${data.username}`);
                         
-                        // Update login form
+                        // Update login form - keep username hidden for security
                         const usernameField = document.getElementById('authUsername');
                         const credentialsInfo = document.getElementById('credentialsInfo');
                         
+                        // Store username internally but don't show it
+                        this.extractedUsername = data.username;
+                        
                         if (usernameField) {
-                            usernameField.placeholder = data.username;
-                            usernameField.value = data.username;
+                            usernameField.placeholder = 'Enter username';
+                            // Don't pre-fill username for security
                         }
                         
                         if (credentialsInfo) {
-                            credentialsInfo.innerHTML = `✅ <strong>Credentials loaded:</strong> Using MongoDB Atlas account <code>${data.username}</code>`;
+                            credentialsInfo.innerHTML = `✅ <strong>Authentication ready:</strong> MongoDB Atlas credentials loaded from environment`;
                         }
                         
-                        // Focus password field since username is pre-filled
+                        // Focus username field
                         setTimeout(() => {
-                            document.getElementById('authPassword').focus();
+                            document.getElementById('authUsername').focus();
                         }, 100);
                         
                     } else {
@@ -1915,15 +1918,14 @@
                         this.authenticateWithHash(username, password);
                         return true; // Will handle async
                     } else {
-                        // Fallback for older browsers - direct comparison (less secure but functional)
-                        isValid = (username === this.validCredentials.username);
-                        // Note: We can't verify password without exposing it, so we'll trust the username match
-                        // In production, this should use proper password hashing
+                        // Fallback: check username matches extracted username
+                        isValid = (username === this.extractedUsername || username === this.validCredentials.username);
+                        // Note: We can't verify password without exposing it in older browsers
                     }
                 } else {
-                    // Fallback credentials - direct comparison
-                    isValid = (username === this.validCredentials.username && password === this.validCredentials.password);
-                    console.log('Using fallback credential validation');
+                    // No valid credentials loaded
+                    isValid = false;
+                    console.log('No valid credentials available for authentication');
                 }
 
                 if (isValid) {
