@@ -18,14 +18,34 @@ let isInitialized = false;
 async function initializeManager() {
   if (!isInitialized) {
     try {
-      manager = new MongoDBManager({
-        logLevel: process.env.NODE_ENV === 'production' ? 'error' : 'info'
-      });
+      // For Vercel serverless, use environment-based configuration
+      const config = {
+        logLevel: process.env.NODE_ENV === 'production' ? 'error' : 'info',
+        serverless: true
+      };
+      
+      manager = new MongoDBManager(config);
+      
+      // Add Atlas cluster from environment variable
+      if (process.env.MONGODB_ATLAS_URI) {
+        manager.getClusterManager().addCluster('atlas-prod', {
+          uri: process.env.MONGODB_ATLAS_URI,
+          environment: 'production',
+          description: 'Atlas Production Cluster',
+          encrypted: false,
+          options: {
+            maxPoolSize: 10,
+            serverSelectionTimeoutMS: 5000
+          }
+        });
+      }
+      
       await manager.initialize();
       isInitialized = true;
-      console.log('MongoDB Manager initialized for Vercel');
+      console.log('MongoDB Manager initialized for Vercel serverless');
     } catch (error) {
       console.error('Failed to initialize MongoDB Manager:', error.message);
+      console.error('Stack:', error.stack);
       throw error;
     }
   }
